@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Business Intelligence Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e2d45;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --accent3: #10b981;
+      --accent4: #f59e0b;
+      --text: #e2e8f0;
+      --text2: #94a3b8;
+      --text3: #475569;
+      --danger: #ef4444;
+      --positive: #10b981;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    .app { position: relative; z-index: 1; display: grid; grid-template-rows: auto auto 1fr; min-height: 100vh; }
+
+    /* Header */
+    header { padding: 18px 28px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--border); background: rgba(10,14,26,0.9); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100; }
+    .logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--accent); letter-spacing: -0.5px; }
+    .logo span { color: var(--text2); font-size: 14px; font-family: 'Outfit', sans-serif; font-weight: 300; margin-left: 10px; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent3); box-shadow: 0 0 8px var(--accent3); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .header-tag { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; }
+
+    /* AI Command bar */
+    .command-section { padding: 20px 28px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .command-label { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent); letter-spacing: 1px; margin-bottom: 10px; }
+    .command-bar { display: flex; gap: 10px; align-items: center; }
+    .command-input-wrap { flex: 1; position: relative; }
+    .command-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; }
+    .command-input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 15px; font-family: 'Outfit', sans-serif; padding: 12px 16px 12px 44px; border-radius: 10px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .command-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,0.08); }
+    .command-input::placeholder { color: var(--text3); }
+    .btn-run { background: var(--accent); color: var(--bg); border: none; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: 'Outfit', sans-serif; cursor: pointer; white-space: nowrap; transition: opacity 0.2s, transform 0.1s; }
+    .btn-run:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-run:active { transform: translateY(0); }
+
+    /* Suggestions */
+    .suggestions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .suggestion { font-size: 12px; padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px; color: var(--text2); cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; background: transparent; }
+    .suggestion:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.05); }
+
+    /* Main content */
+    main { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* KPI row */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    @media(max-width:700px){ .kpi-row { grid-template-columns: repeat(2,1fr); } }
+    .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; position: relative; overflow: hidden; transition: border-color 0.2s; }
+    .kpi:hover { border-color: var(--accent); }
+    .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .kpi.blue::before { background: var(--accent); }
+    .kpi.purple::before { background: var(--accent2); }
+    .kpi.green::before { background: var(--accent3); }
+    .kpi.amber::before { background: var(--accent4); }
+    .kpi-label { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .kpi-value { font-size: 26px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .kpi-change { font-size: 12px; }
+    .kpi-change.up { color: var(--accent3); }
+    .kpi-change.down { color: var(--danger); }
+
+    /* Chart area */
+    .chart-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .chart-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .chart-title { font-size: 15px; font-weight: 500; color: var(--text); }
+    .chart-subtitle { font-size: 12px; color: var(--text3); margin-left: auto; font-family: 'DM Mono', monospace; }
+    .chart-wrap { position: relative; width: 100%; height: 300px; }
+    .chart-tag { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-family: 'DM Mono', monospace; font-weight: 500; }
+    .chart-tag.ai { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+
+    /* Two col grid */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media(max-width:800px){ .two-col { grid-template-columns: 1fr; } }
+
+    /* AI response bubble */
+    .ai-response { background: var(--surface2); border: 1px solid rgba(0,212,255,0.2); border-radius: 12px; padding: 14px 18px; font-size: 13px; color: var(--text2); line-height: 1.7; display: flex; gap: 12px; align-items: flex-start; }
+    .ai-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .ai-text strong { color: var(--accent); }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th { text-align: left; padding: 10px 12px; color: var(--text3); font-weight: 500; font-family: 'DM Mono', monospace; font-size: 11px; border-bottom: 1px solid var(--border); letter-spacing: 0.5px; }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(30,45,69,0.5); color: var(--text2); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { color: var(--text); background: rgba(255,255,255,0.02); }
+    .trend-up { color: var(--accent3); font-size: 12px; }
+    .trend-down { color: var(--danger); font-size: 12px; }
+    .pill { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .pill-green { background: rgba(16,185,129,0.15); color: var(--accent3); }
+    .pill-red { background: rgba(239,68,68,0.15); color: var(--danger); }
+    .pill-blue { background: rgba(0,212,255,0.1); color: var(--accent); }
+    .pill-amber { background: rgba(245,158,11,0.15); color: var(--accent4); }
+
+    /* Query history */
+    .history { display: flex; gap: 8px; flex-wrap: wrap; }
+    .history-item { font-size: 11px; font-family: 'DM Mono', monospace; padding: 4px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text3); cursor: pointer; }
+    .history-item:hover { color: var(--text2); border-color: var(--text3); }
+
+    .section-heading { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); letter-spacing: 1px; margin-bottom: 12px; }
+
+    .hidden { display: none !important; }
+
+    /* Typing animation */
+    .typing { display: inline-flex; gap: 4px; align-items: center; }
+    .typing span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: dot 1.2s infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot { 0%,80%,100%{opacity:.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+
+    footer { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    footer span { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">BizAI <span>Business Intelligence Dashboard</span></div>
+    <div class="header-right">
+      <div class="live-dot"></div>
+      <div class="header-tag">NO API KEY REQUIRED</div>
+      <div class="header-tag">harshithhuk</div>
+    </div>
+  </header>
+
+  <!-- AI Command Bar -->
+  <div class="command-section">
+    <div class="command-label">⬡ AI NATURAL LANGUAGE QUERY</div>
+    <div class="command-bar">
+      <div class="command-input-wrap">
+        <span class="command-icon">🔍</span>
+        <input class="command-input" id="queryInput" type="text"
+          placeholder="Ask anything — e.g. 'show sales by region' or 'top products this year'..."
+          onkeydown="if(event.key==='Enter') runQuery()"/>
+      </div>
+      <button class="btn-run" onclick="runQuery()">Run Query →</button>
+    </div>
+    <div class="suggestions">
+      <span class="suggestion" onclick="ask('show sales by region')">📍 sales by region</span>
+      <span class="suggestion" onclick="ask('monthly revenue trend')">📈 monthly revenue</span>
+      <span class="suggestion" onclick="ask('top products')">🏆 top products</span>
+      <span class="suggestion" onclick="ask('customer segments')">👥 customer segments</span>
+      <span class="suggestion" onclick="ask('profit margin by category')">💰 profit margins</span>
+      <span class="suggestion" onclick="ask('quarterly performance')">📊 quarterly view</span>
+      <span class="suggestion" onclick="ask('show anomalies')">⚠️ anomalies</span>
+      <span class="suggestion" onclick="ask('sales rep performance')">🧑 sales reps</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <main>
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi blue">
+        <div class="kpi-label">TOTAL REVENUE</div>
+        <div class="kpi-value">£4.82M</div>
+        <div class="kpi-change up">↑ 12.4% vs last year</div>
+      </div>
+      <div class="kpi purple">
+        <div class="kpi-label">TOTAL ORDERS</div>
+        <div class="kpi-value">18,340</div>
+        <div class="kpi-change up">↑ 8.1% vs last year</div>
+      </div>
+      <div class="kpi green">
+        <div class="kpi-label">AVG ORDER VALUE</div>
+        <div class="kpi-value">£262</div>
+        <div class="kpi-change up">↑ 3.9% vs last year</div>
+      </div>
+      <div class="kpi amber">
+        <div class="kpi-label">PROFIT MARGIN</div>
+        <div class="kpi-value">34.2%</div>
+        <div class="kpi-change down">↓ 1.2% vs last year</div>
+      </div>
+    </div>
+
+    <!-- AI Response -->
+    <div class="ai-response" id="aiResponse">
+      <div class="ai-icon">🤖</div>
+      <div class="ai-text" id="aiText">
+        Welcome to <strong>BizAI</strong> — your natural language business intelligence dashboard. Try typing a question like <strong>"show me sales by region"</strong> or click one of the quick queries above. I'll analyse the data and update the charts instantly.
+      </div>
+    </div>
+
+    <!-- Main chart (dynamic) -->
+    <div class="chart-section" id="mainChartSection">
+      <div class="chart-header">
+        <div class="chart-title" id="mainChartTitle">Monthly Revenue Trend — 2024</div>
+        <span class="chart-tag ai">AI GENERATED</span>
+        <div class="chart-subtitle" id="mainChartSubtitle">Full year overview</div>
+      </div>
+      <div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="Main data visualisation chart"></canvas></div>
+    </div>
+
+    <!-- Two col -->
+    <div class="two-col">
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="chart-title">Sales by Region</div>
+          <span class="chart-tag ai">LIVE</span>
+        </div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="regionChart"></canvas></div>
+      </div>
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="chart-title">Category Breakdown</div>
+          <span class="chart-tag ai">LIVE</span>
+        </div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="categoryChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="chart-section" id="tableSection">
+      <div class="chart-header">
+        <div class="chart-title" id="tableTitle">Top Products by Revenue</div>
+        <span class="chart-tag ai">AI GENERATED</span>
+      </div>
+      <div id="tableWrap"></div>
+    </div>
+
+    <!-- Query history -->
+    <div>
+      <div class="section-heading">QUERY HISTORY</div>
+      <div class="history" id="history"></div>
+    </div>
+
+  </main>
+
+  <footer>
+    <span>BizAI · Rule-based NLP Engine · No API Required</span>
+    <span>Harshith Pabbathi · MSc Data Science · Northumbria University</span>
+  </footer>
+
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const DATA = {
+  monthly: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    revenue: [310,285,420,398,445,512,487,530,498,562,610,763],
+    orders:  [1180,1050,1560,1480,1650,1920,1810,1970,1850,2090,2270,2510],
+    profit:  [98,88,140,125,148,172,158,178,162,185,205,248],
+  },
+  regions: {
+    labels: ['London','North West','South East','Yorkshire','Scotland','Midlands','Wales','North East'],
+    revenue: [1420,680,520,390,310,280,140,80],
+    growth:  [14.2, 8.1, 11.3, -2.4, 6.8, 3.2, -1.1, 9.5],
+  },
+  products: [
+    { name: 'Enterprise Suite Pro',   category: 'Software',    revenue: 842000, units: 310,  margin: 78, trend: 'up' },
+    { name: 'Analytics Platform',     category: 'Software',    revenue: 614000, units: 228,  margin: 72, trend: 'up' },
+    { name: 'Cloud Storage 1TB',      category: 'Cloud',       revenue: 398000, units: 1840, margin: 61, trend: 'up' },
+    { name: 'Security Shield',        category: 'Security',    revenue: 312000, units: 520,  margin: 65, trend: 'down' },
+    { name: 'Dev Tools Bundle',       category: 'Software',    revenue: 287000, units: 890,  margin: 58, trend: 'up' },
+    { name: 'CRM Essential',          category: 'CRM',         revenue: 241000, units: 680,  margin: 54, trend: 'down' },
+    { name: 'Backup Solutions',       category: 'Cloud',       revenue: 198000, units: 1240, margin: 48, trend: 'up' },
+    { name: 'Training & Support',     category: 'Services',    revenue: 156000, units: 420,  margin: 42, trend: 'up' },
+  ],
+  categories: {
+    labels: ['Software','Cloud','Security','CRM','Services','Hardware'],
+    revenue: [1743,596,312,241,156,92],
+    margins: [68,55,65,54,42,28],
+  },
+  quarters: {
+    labels: ['Q1 2023','Q2 2023','Q3 2023','Q4 2023','Q1 2024','Q2 2024','Q3 2024','Q4 2024'],
+    revenue: [850,1020,960,1240,1015,1355,1515,1935],
+    target:  [900,1000,1000,1200,1100,1300,1500,1800],
+  },
+  salesReps: [
+    { name: 'Sarah Mitchell',  region: 'London',    revenue: 520000, deals: 48, rate: 68 },
+    { name: 'James Okafor',    region: 'North West', revenue: 380000, deals: 41, rate: 72 },
+    { name: 'Priya Sharma',    region: 'South East', revenue: 340000, deals: 37, rate: 65 },
+    { name: 'Tom Bradley',     region: 'Yorkshire',  revenue: 280000, deals: 32, rate: 58 },
+    { name: 'Emma Clarke',     region: 'Scotland',   revenue: 245000, deals: 28, rate: 61 },
+    { name: 'Harish Patel',    region: 'Midlands',   revenue: 198000, deals: 24, rate: 54 },
+  ],
+  segments: {
+    labels: ['Enterprise','SMB','Startup','Government','Non-Profit'],
+    revenue: [2140,1380,620,440,240],
+    customers: [48,320,890,12,35],
+  },
+};
+
+const COLORS = {
+  blue:   '#00d4ff', purple: '#7c3aed', green: '#10b981',
+  amber:  '#f59e0b', red:    '#ef4444', pink:  '#ec4899',
+  teal:   '#14b8a6', orange: '#f97316',
+};
+const PALETTE = Object.values(COLORS);
+
+// ── NLP ENGINE ────────────────────────────────────────────────────────────────
+const INTENTS = [
+  { keywords: ['region','geography','location','city','area','map','where'], intent: 'region' },
+  { keywords: ['monthly','month','trend','over time','timeline','time'], intent: 'monthly' },
+  { keywords: ['product','top','best','item','sku','selling','bestsell'], intent: 'products' },
+  { keywords: ['category','categor','type','segment','department'], intent: 'category' },
+  { keywords: ['quarter','quarterly','q1','q2','q3','q4'], intent: 'quarterly' },
+  { keywords: ['rep','sales rep','salesperson','staff','team','person','who'], intent: 'salesreps' },
+  { keywords: ['customer','segment','client','buyer','user'], intent: 'segments' },
+  { keywords: ['profit','margin','profitability','markup'], intent: 'margin' },
+  { keywords: ['anomal','unusual','outlier','spike','drop','weird'], intent: 'anomaly' },
+  { keywords: ['revenue','income','earning','sales','total'], intent: 'monthly' },
+];
+
+function detectIntent(query) {
+  const q = query.toLowerCase();
+  let best = null, bestScore = 0;
+  for (const rule of INTENTS) {
+    const score = rule.keywords.filter(k => q.includes(k)).length;
+    if (score > bestScore) { bestScore = score; best = rule.intent; }
+  }
+  return best || 'monthly';
+}
+
+// ── CHART INSTANCES ───────────────────────────────────────────────────────────
+let mainChart, regionChart, categoryChart;
+
+function makeChart(id, type, labels, datasets, options = {}) {
+  const existing = Chart.getChart(id);
+  if (existing) existing.destroy();
+  return new Chart(document.getElementById(id), {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { size: 12, family: 'Outfit' }, padding: 16 } },
+        ...options.plugins
+      },
+      scales: type === 'bar' || type === 'line' ? {
+        x: { ticks: { color: '#475569', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#475569', font: { size: 11 }, callback: options.yFmt || (v => v) }, grid: { color: 'rgba(255,255,255,0.06)' } }
+      } : undefined,
+      ...options.extra
+    }
+  });
+}
+
+function initDefaultCharts() {
+  // Region doughnut
+  regionChart = makeChart('regionChart', 'doughnut',
+    DATA.regions.labels,
+    [{ data: DATA.regions.revenue, backgroundColor: PALETTE, borderWidth: 2, borderColor: '#111827' }],
+    { plugins: { legend: { position: 'right' } } }
+  );
+
+  // Category bar
+  categoryChart = makeChart('categoryChart', 'bar',
+    DATA.categories.labels,
+    [{ label: 'Revenue (£K)', data: DATA.categories.revenue, backgroundColor: PALETTE.map(c => c+'bb'), borderRadius: 6 }],
+    { yFmt: v => '£'+v+'K' }
+  );
+
+  renderMainChart('monthly');
+  renderTable('products');
+}
+
+function renderMainChart(intent) {
+  const fmt = v => '£'+Math.round(v).toLocaleString();
+
+  if (intent === 'monthly') {
+    document.getElementById('mainChartTitle').textContent = 'Monthly Revenue — 2024';
+    document.getElementById('mainChartSubtitle').textContent = 'Revenue vs Profit';
+    mainChart = makeChart('mainChart', 'line', DATA.monthly.labels, [
+      { label: 'Revenue (£K)', data: DATA.monthly.revenue, borderColor: COLORS.blue, backgroundColor: COLORS.blue+'22', tension: 0.4, fill: true, pointBackgroundColor: COLORS.blue, pointRadius: 4 },
+      { label: 'Profit (£K)',  data: DATA.monthly.profit,  borderColor: COLORS.green, backgroundColor: COLORS.green+'22', tension: 0.4, fill: true, pointBackgroundColor: COLORS.green, pointRadius: 4 },
+    ], { yFmt: v => '£'+v+'K' });
+
+  } else if (intent === 'region') {
+    document.getElementById('mainChartTitle').textContent = 'Revenue by Region';
+    document.getElementById('mainChartSubtitle').textContent = 'UK regional breakdown';
+    mainChart = makeChart('mainChart', 'bar', DATA.regions.labels, [
+      { label: 'Revenue (£K)', data: DATA.regions.revenue, backgroundColor: PALETTE.map(c=>c+'cc'), borderRadius: 8, borderSkipped: false }
+    ], { yFmt: v => '£'+v+'K' });
+
+  } else if (intent === 'quarterly') {
+    document.getElementById('mainChartTitle').textContent = 'Quarterly Revenue vs Target';
+    document.getElementById('mainChartSubtitle').textContent = '2023–2024';
+    mainChart = makeChart('mainChart', 'bar', DATA.quarters.labels, [
+      { label: 'Actual (£K)',  data: DATA.quarters.revenue, backgroundColor: COLORS.blue+'bb', borderRadius: 6 },
+      { label: 'Target (£K)', data: DATA.quarters.target,  backgroundColor: COLORS.amber+'66', borderRadius: 6, borderDash: [5,5] },
+    ], { yFmt: v => '£'+v+'K' });
+
+  } else if (intent === 'category' || intent === 'margin') {
+    document.getElementById('mainChartTitle').textContent = 'Revenue & Margin by Category';
+    document.getElementById('mainChartSubtitle').textContent = 'Category performance';
+    mainChart = makeChart('mainChart', 'bar', DATA.categories.labels, [
+      { label: 'Revenue (£K)', data: DATA.categories.revenue, backgroundColor: COLORS.purple+'bb', borderRadius: 6, yAxisID: 'y' },
+      { label: 'Margin %',     data: DATA.categories.margins, backgroundColor: COLORS.green+'bb',  borderRadius: 6, yAxisID: 'y2', type: 'line', tension: 0.4, pointRadius: 5 },
+    ], { extra: { scales: {
+      x:  { ticks:{color:'#475569'}, grid:{color:'rgba(255,255,255,0.04)'} },
+      y:  { ticks:{color:'#475569', callback: v=>'£'+v+'K'}, grid:{color:'rgba(255,255,255,0.06)'} },
+      y2: { position:'right', ticks:{color:'#10b981', callback: v=>v+'%'}, grid:{display:false} }
+    }}});
+
+  } else if (intent === 'segments') {
+    document.getElementById('mainChartTitle').textContent = 'Revenue by Customer Segment';
+    document.getElementById('mainChartSubtitle').textContent = 'Segment analysis';
+    mainChart = makeChart('mainChart', 'doughnut', DATA.segments.labels, [
+      { data: DATA.segments.revenue, backgroundColor: PALETTE, borderWidth: 3, borderColor: '#111827' }
+    ], { plugins: { legend: { position: 'right' } } });
+
+  } else if (intent === 'salesreps') {
+    document.getElementById('mainChartTitle').textContent = 'Sales Rep Performance';
+    document.getElementById('mainChartSubtitle').textContent = 'Revenue by representative';
+    mainChart = makeChart('mainChart', 'bar', DATA.salesReps.map(r=>r.name), [
+      { label: 'Revenue (£K)', data: DATA.salesReps.map(r=>Math.round(r.revenue/1000)), backgroundColor: PALETTE.map(c=>c+'cc'), borderRadius: 8 }
+    ], { yFmt: v=>'£'+v+'K' });
+
+  } else if (intent === 'anomaly') {
+    document.getElementById('mainChartTitle').textContent = 'Anomaly Detection — Monthly Orders';
+    document.getElementById('mainChartSubtitle').textContent = 'Outliers highlighted in red';
+    const mean = DATA.monthly.orders.reduce((a,b)=>a+b,0)/12;
+    const std  = Math.sqrt(DATA.monthly.orders.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/12);
+    const colors = DATA.monthly.orders.map(v => Math.abs(v-mean) > std ? COLORS.red+'cc' : COLORS.blue+'99');
+    mainChart = makeChart('mainChart', 'bar', DATA.monthly.labels, [
+      { label: 'Orders', data: DATA.monthly.orders, backgroundColor: colors, borderRadius: 6 }
+    ], {});
+  }
+}
+
+// ── TABLE RENDER ──────────────────────────────────────────────────────────────
+function renderTable(intent) {
+  const wrap = document.getElementById('tableWrap');
+  let html = '';
+
+  if (intent === 'products' || intent === 'monthly') {
+    document.getElementById('tableTitle').textContent = 'Top Products by Revenue';
+    html = `<table class="data-table"><thead><tr>
+      <th>PRODUCT</th><th>CATEGORY</th><th>REVENUE</th><th>UNITS SOLD</th><th>MARGIN</th><th>TREND</th>
+    </tr></thead><tbody>`;
+    DATA.products.forEach((p,i) => {
+      const catColor = {Software:'blue',Cloud:'green',Security:'amber',CRM:'purple',Services:'blue'}[p.category]||'blue';
+      html += `<tr>
+        <td style="color:var(--text);font-weight:500;">${i+1}. ${p.name}</td>
+        <td><span class="pill pill-${catColor}">${p.category}</span></td>
+        <td style="font-family:'DM Mono',monospace;color:var(--accent);">£${(p.revenue/1000).toFixed(0)}K</td>
+        <td style="font-family:'DM Mono',monospace;">${p.units.toLocaleString()}</td>
+        <td><span style="color:${p.margin>60?'var(--accent3)':p.margin>45?'var(--accent4)':'var(--danger)'};font-family:'DM Mono',monospace;">${p.margin}%</span></td>
+        <td class="${p.trend==='up'?'trend-up':'trend-down'}">${p.trend==='up'?'↑ Growing':'↓ Declining'}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+
+  } else if (intent === 'region') {
+    document.getElementById('tableTitle').textContent = 'Regional Performance Breakdown';
+    html = `<table class="data-table"><thead><tr>
+      <th>REGION</th><th>REVENUE (£K)</th><th>MARKET SHARE</th><th>YoY GROWTH</th><th>STATUS</th>
+    </tr></thead><tbody>`;
+    const total = DATA.regions.revenue.reduce((a,b)=>a+b,0);
+    DATA.regions.labels.forEach((r,i) => {
+      const share = (DATA.regions.revenue[i]/total*100).toFixed(1);
+      const g = DATA.regions.growth[i];
+      html += `<tr>
+        <td style="color:var(--text);font-weight:500;">📍 ${r}</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--accent);">£${DATA.regions.revenue[i]}K</td>
+        <td style="font-family:'DM Mono',monospace;">${share}%</td>
+        <td class="${g>=0?'trend-up':'trend-down'}" style="font-family:'DM Mono',monospace;">${g>=0?'+':''}${g}%</td>
+        <td><span class="pill ${g>=8?'pill-green':g>=0?'pill-blue':'pill-red'}">${g>=8?'Strong':g>=0?'Stable':'Declining'}</span></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+
+  } else if (intent === 'salesreps') {
+    document.getElementById('tableTitle').textContent = 'Sales Representative Leaderboard';
+    html = `<table class="data-table"><thead><tr>
+      <th>RANK</th><th>NAME</th><th>REGION</th><th>REVENUE</th><th>DEALS CLOSED</th><th>WIN RATE</th>
+    </tr></thead><tbody>`;
+    DATA.salesReps.forEach((r,i) => {
+      const medals = ['🥇','🥈','🥉'];
+      html += `<tr>
+        <td style="font-size:16px;">${medals[i]||i+1}</td>
+        <td style="color:var(--text);font-weight:500;">${r.name}</td>
+        <td style="color:var(--text3);">${r.region}</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--accent);">£${(r.revenue/1000).toFixed(0)}K</td>
+        <td style="font-family:'DM Mono',monospace;">${r.deals}</td>
+        <td><span style="color:${r.rate>=65?'var(--accent3)':r.rate>=55?'var(--accent4)':'var(--danger)'};font-family:'DM Mono',monospace;">${r.rate}%</span></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+
+  } else if (intent === 'segments') {
+    document.getElementById('tableTitle').textContent = 'Customer Segment Analysis';
+    html = `<table class="data-table"><thead><tr>
+      <th>SEGMENT</th><th>REVENUE (£K)</th><th>CUSTOMERS</th><th>AVG REVENUE/CUSTOMER</th><th>PRIORITY</th>
+    </tr></thead><tbody>`;
+    DATA.segments.labels.forEach((s,i) => {
+      const avg = Math.round(DATA.segments.revenue[i]*1000/DATA.segments.customers[i]);
+      const priority = avg > 10000 ? 'pill-green' : avg > 1000 ? 'pill-blue' : 'pill-amber';
+      const pLabel   = avg > 10000 ? 'High Value' : avg > 1000 ? 'Core' : 'Volume';
+      html += `<tr>
+        <td style="color:var(--text);font-weight:500;">${s}</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--accent);">£${DATA.segments.revenue[i]}K</td>
+        <td style="font-family:'DM Mono',monospace;">${DATA.segments.customers[i]}</td>
+        <td style="font-family:'DM Mono',monospace;">£${avg.toLocaleString()}</td>
+        <td><span class="pill ${priority}">${pLabel}</span></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+
+  } else {
+    // Default — products table
+    renderTable('products');
+    return;
+  }
+
+  wrap.innerHTML = html;
+}
+
+// ── AI RESPONSES ──────────────────────────────────────────────────────────────
+const RESPONSES = {
+  monthly:   `Showing <strong>monthly revenue and profit trends for 2024</strong>. Revenue peaked in December at £763K — up 145% from the January low. Profit margins remain healthy at ~32% average across the year.`,
+  region:    `<strong>London dominates</strong> with £1.42M (29.5% of total revenue) followed by North West at £680K. The North East underperforms at £80K — potential growth opportunity. Yorkshire shows a <strong>-2.4% YoY decline</strong> — worth investigating.`,
+  products:  `Your <strong>top 3 products</strong> account for 60% of total revenue. Enterprise Suite Pro leads at £842K with a strong 78% margin. Security Shield and CRM Essential are showing declining trends — review pricing and positioning.`,
+  category:  `<strong>Software is the dominant category</strong> at £1.74M (36% of revenue) with the highest margins at 68%. Hardware has the lowest margin at 28%. Consider shifting investment toward Software and Cloud categories.`,
+  quarterly: `<strong>Q4 2024 was the strongest quarter</strong> at £1.94M, beating target by 7.5%. Q1 2024 missed target by £85K. The business shows clear seasonal growth — consider resourcing accordingly for Q4 2025.`,
+  salesreps: `<strong>Sarah Mitchell leads the team</strong> with £520K in revenue and a 68% win rate. There's a significant performance gap — top 2 reps generate 3x more than the bottom 2. Consider pairing high performers with lower performers for coaching.`,
+  segments:  `<strong>Enterprise customers</strong> generate the highest average revenue per customer (£44.6K) despite being the smallest segment by count. SMB is the largest volume segment. Focus retention efforts on Enterprise to protect high-value revenue.`,
+  margin:    `<strong>Software leads on margin at 68%</strong>, followed by Security at 65%. Hardware margins at 28% are low — evaluate whether this line is strategically worth continuing. Overall blended margin is 34.2%.`,
+  anomaly:   `<strong>Anomaly detected!</strong> November and December orders show statistically significant spikes above the mean (highlighted in red). January and February dip below expected baseline — typical seasonal pattern for B2B SaaS.`,
+};
+
+// ── QUERY ENGINE ──────────────────────────────────────────────────────────────
+let queryHistory = [];
+
+function ask(q) {
+  document.getElementById('queryInput').value = q;
+  runQuery();
+}
+
+function runQuery() {
+  const q = document.getElementById('queryInput').value.trim();
+  if (!q) return;
+
+  const intent = detectIntent(q);
+
+  // Simulate typing
+  const responseEl = document.getElementById('aiText');
+  responseEl.innerHTML = '<span class="typing"><span></span><span></span><span></span></span> Analysing query...';
+
+  setTimeout(() => {
+    responseEl.innerHTML = `<strong>Query:</strong> "${q}" → <strong>${intent.toUpperCase()}</strong> intent detected<br><br>${RESPONSES[intent] || RESPONSES.monthly}`;
+    renderMainChart(intent);
+    renderTable(intent);
+  }, 600);
+
+  // History
+  if (!queryHistory.includes(q)) {
+    queryHistory.unshift(q);
+    if (queryHistory.length > 8) queryHistory.pop();
+    const hist = document.getElementById('history');
+    hist.innerHTML = queryHistory.map(h =>
+      `<span class="history-item" onclick="ask('${h}')">${h}</span>`
+    ).join('');
+  }
+
+  document.getElementById('queryInput').value = '';
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+initDefaultCharts();
+</script>
+</body>
+</html>
