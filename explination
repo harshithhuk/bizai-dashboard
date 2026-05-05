@@ -1,0 +1,22 @@
+#"One of my recent projects is an AI-powered BI dashboard I called BizAI. The problem I wanted to solve is that most business intelligence tools like Tableau or Power BI are expensive, complex, and require training — so non-technical people like business analysts and managers can't access their own data easily.
+My solution was a natural language interface. You type a question in plain English — something like 'show me profit margins by category' or 'who are the top sales reps' — and the dashboard instantly updates with the right chart, the right data table, and a written AI insight explaining what the numbers mean.
+Technically, I built a custom NLP intent detection engine. It tokenises the input, scores each word against keyword sets for 8 different intents — region, monthly trends, products, anomalies, customer segments and so on — and picks the best match. It then dynamically renders the right chart type — whether that's a line chart, bar chart, doughnut, dual-axis or combo chart.
+I also built in anomaly detection using mean and standard deviation — so if you ask it to 'show anomalies', it flags any months where orders are statistically unusual.
+The whole thing runs in a single HTML file with no API key, no backend, no install. It's live on my GitHub right now."
+# The Problem — BI tools are complex and inaccessible for non-technical users
+2. Your Solution — Natural language interface that anyone can use
+3. The Technical Skill — You built a custom NLP engine from scratch, not just plugged in an API
+4. The Business Angle — KPIs, regional analysis, sales performance, anomaly detection — all real business metrics
+5. The Portfolio Point — It's live, open source, runs in one file, anyone can try it right now
+#BizAI is an AI-powered Business Intelligence dashboard that allows anyone to query business data using plain English — no technical skills, no expensive software, and no API key required.
+The Problem
+Traditional BI tools like Tableau and Power BI are powerful but complex. Business analysts and managers cannot access their own data without technical training or depending on overloaded data teams. BizAI removes that barrier completely.
+How It Works
+When a user types a query such as "show me sales by region", the dashboard runs it through a custom-built NLP intent detection engine inspired by the VADER sentiment model. First, the query is tokenised and lowercased. Each word is then scored against eight intent rule sets — words like "region" trigger the regional analysis, "monthly" triggers the time series view, 
+and "anomaly" triggers statistical outlier detection. The intent with the highest keyword score wins and instantly renders the correct visualisation.
+The dashboard supports six chart types — line charts for trends, bar charts for comparisons, doughnut charts for proportions, dual-axis charts for combined metrics, combo charts, and ranked tables. Every query also generates a plain English insight panel explaining what the data means, which region is underperforming, 
+which product has the best margin, or which sales rep leads the team.
+The Data
+The dashboard contains a realistic UK B2B SaaS dataset covering £4.82M annual revenue, 18,340 orders, eight UK regions, six product categories, and a sales representative leaderboard. Anomaly detection uses mean and standard deviation calculations to automatically flag unusual spikes and drops in red.
+Technical Stack
+Built entirely in vanilla HTML, CSS and JavaScript using Chart.js for visualisations. There is no backend, no framework, no API calls and no installation required. The entire application is a single HTML file that runs directly in any browser — making it instantly shareable, deployable, and accessible to anyone.
